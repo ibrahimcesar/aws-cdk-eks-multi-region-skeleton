@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+import * as fs from 'node:fs';
 import * as yaml from 'js-yaml';
 import { Cluster, KubernetesManifest } from 'aws-cdk-lib/aws-eks';
 
@@ -13,8 +13,7 @@ export function readYamlFromDir(
       if (data != undefined) {
         let i = 0;
         yaml.loadAll(data).forEach((item) => {
-          const resource = cluster.addManifest(file.substr(0, file.length - 5) + i, item);
-          // @ts-ignore
+          const resource = cluster.addManifest(file.substr(0, file.length - 5) + i);
           if (previousResource != undefined) {
             resource.node.addDependency(previousResource)
           }

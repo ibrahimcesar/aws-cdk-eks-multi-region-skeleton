@@ -7,11 +7,16 @@ import { Stack, StackProps} from 'aws-cdk-lib';
 import { Construct } from "constructs";
 
 export class ClusterStack extends Stack {
+  public readonly cluster: Cluster;
+  public readonly firstRegionRole: Role;
+  public readonly secondRegionRole: Role;
 
   constructor(scope: Construct, id: string, props?: StackProps) {
+  
     super(scope, id, props);
 
     const primaryRegion = 'us-west-1';
+    
     const clusterAdmin = new Role(this, 'AdminRole', {
       assumedBy: new iam.AccountRootPrincipal()
     });
@@ -20,13 +25,22 @@ export class ClusterStack extends Stack {
       clusterName: "demogo",
       mastersRole: clusterAdmin,
       version: KubernetesVersion.V1_21,
-      defaultCapacity: 2
+      defaultCapacity: 2,
+      defaultCapacityInstance: Stack.of(this).region == primaryRegion
+        ? new InstanceType('r5.2xlarge')
+        : new InstanceType('m5.2xlarge')
     });
 
     cluster.addAutoScalingGroupCapacity('spot-group', {
       instanceType: new InstanceType('m5.xlarge'),
-      spotPrice: Stack.of(this).region === primaryRegion ? '0.248': '0.192';
+      spotPrice: Stack.of(this).region === primaryRegion ? '0.248': '0.192'
     });
+
+    if (Stack.of(this).region === primaryRegion) {
+      this.firstRegionRole = createDeployRole(this, `for-1st-region`, cluster)
+    } else {
+      this.secondRegionRole = createDeployRole(this, `for-2nd-region`, cluster)
+    }
 
   }
 }
@@ -40,4 +54,15 @@ function createDeployRole(scope: Construct, id: string, cluster: Cluster): Role 
   cluster.awsAuth.addMastersRole(role);
 
   return role;
+}
+
+export interface EksProps extends StackProps {
+  cluster: Cluster
+}
+
+export interface CicdProps extends StackProps {
+  firstRegionCluster: Cluster,
+  secondRegionCluster: Cluster,
+  firstRegionRole: Role,
+  secondRegionRole: Role
 }
