@@ -1,14 +1,10 @@
-import * as cdk from '@aws-cdk/core';
-import codecommit = require('@aws-cdk/aws-codecommit');
-import ecr = require('@aws-cdk/aws-ecr');
-import codepipeline = require('@aws-cdk/aws-codepipeline');
-import pipelineAction = require('@aws-cdk/aws-codepipeline-actions');
-import { codeToECRspec, deployToEKSspec } from '../utils/buildspecs';
+import { Stack, StackProps} from 'aws-cdk-lib';
+import { Construct } from "constructs";
 
 
-export class CicdStack extends cdk.Stack {
+export class CicdStack extends Stack {
 
-    constructor(scope: cdk.Construct, id: string, props: cdk.StackProps) {
+    constructor(scope: Construct, id: string, props: StackProps) {
         super(scope, id, props);
 
         const primaryRegion = 'ap-northeast-2';

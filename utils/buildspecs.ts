@@ -1,22 +1,23 @@
-import codebuild = require('@aws-cdk/aws-codebuild');
-import * as iam from '@aws-cdk/aws-iam';
-import * as cdk from '@aws-cdk/core';
-import { PipelineProject } from '@aws-cdk/aws-codebuild';
-import * as ecr from '@aws-cdk/aws-ecr';
-import * as eks from '@aws-cdk/aws-eks';
+import { BuildSpec, LinuxBuildImage, PipelineProject } from 'aws-cdk-lib/aws-codebuild';
+import { Cluster } from 'aws-cdk-lib/aws-eks';
+import { Construct } from "constructs";
+import { IRepository } from 'aws-cdk-lib/aws-ecr';
+import { PolicyStatement, Role } from "aws-cdk-lib/aws-iam";
 
 
-export function codeToECRspec (scope: cdk.Construct, apprepo: string) :PipelineProject {
-    const buildForECR = new codebuild.PipelineProject(scope, `build-to-ecr`, { 
+export function codeToECRspec(
+  scope: Construct,
+  apprepo: string ): PipelineProject {
+    const buildForECR = new PipelineProject(scope, `build-to-ecr`, { 
         projectName: `build-to-ecr`,
         environment: {
-            buildImage: codebuild.LinuxBuildImage.UBUNTU_14_04_DOCKER_18_09_0,
+            buildImage: LinuxBuildImage.AMAZON_LINUX_2_4,
             privileged: true
         },
         environmentVariables: { 'ECR_REPO_URI': {
             value: apprepo
           } },
-        buildSpec: codebuild.BuildSpec.fromObject({
+        buildSpec: BuildSpec.fromObject({
             version: "0.2",
             phases: {
                 pre_build: {
@@ -45,11 +46,16 @@ export function codeToECRspec (scope: cdk.Construct, apprepo: string) :PipelineP
 
 }
 
-export function deployToEKSspec (scope: cdk.Construct, region: string, cluster: eks.Cluster, apprepo: ecr.IRepository, roleToAssume: iam.Role) :PipelineProject {
+export function deployToEKSspec(
+  scope: Construct,
+  region: string,
+  cluster: Cluster,
+  apprepo: IRepository,
+  roleToAssume: Role): PipelineProject {
     
-    const deployBuildSpec = new codebuild.PipelineProject(scope, `deploy-to-eks-${region}`, {
+    const deployBuildSpec = new PipelineProject(scope, `deploy-to-eks-${region}`, {
         environment: {
-            buildImage: codebuild.LinuxBuildImage.fromAsset(scope, `custom-image-for-eks-${region}`, {
+            buildImage: LinuxBuildImage.fromAsset(scope, `custom-image-for-eks-${region}`, {
                 directory: './utils/buildimage'
             })
         },
@@ -58,7 +64,7 @@ export function deployToEKSspec (scope: cdk.Construct, region: string, cluster: 
             'CLUSTER_NAME': {  value: cluster.clusterName },
             'ECR_REPO_URI': {  value: apprepo.repositoryUri } ,
         },
-        buildSpec: codebuild.BuildSpec.fromObject({
+        buildSpec: BuildSpec.fromObject({
             version: "0.2",
             phases: {
               install: {
@@ -81,12 +87,12 @@ export function deployToEKSspec (scope: cdk.Construct, region: string, cluster: 
             }})
     });
 
-    deployBuildSpec.addToRolePolicy(new iam.PolicyStatement({
+    deployBuildSpec.addToRolePolicy(new PolicyStatement({
       actions: ['eks:DescribeCluster'],
       resources: [`*`],
     }));
 
-    deployBuildSpec.addToRolePolicy(new iam.PolicyStatement({
+    deployBuildSpec.addToRolePolicy(new PolicyStatement({
         actions: ['sts:AssumeRole'],
         resources: [roleToAssume.roleArn]
     }))

@@ -1,13 +1,11 @@
-import * as cdk from '@aws-cdk/core';
-import { readYamlFromDir } from '../utils/read-file';
+import { Stack, StackProps} from 'aws-cdk-lib';
+import { Construct } from "constructs";
 
-export class ContainerStack extends cdk.Stack {
-  constructor(scope: cdk.Construct, id: string, props: cdk.StackProps) {
+export class ContainerStack extends Stack {
+  constructor(scope: Construct, id: string, props: StackProps) {
     super(scope, id, props);
 
-
   }
-
 }
 
 
